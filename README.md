@@ -106,18 +106,27 @@ Le policy RLS garantiscono che ogni tenant acceda **solo ai propri dati**.
 Estrae l'ID tenant dal claim JWT `sub` (username) impostato da FastAPI:
 
 ```sql
-CREATE OR REPLACE FUNCTION get_current_tenant_id()
-RETURNS uuid AS $$
+CREATE OR REPLACE FUNCTION public.get_current_tenant_id()
+RETURNS uuid 
+LANGUAGE sql 
+STABLE 
+SET search_path = public, pg_temp
+AS $$
   SELECT id 
-  FROM users 
+  FROM public.users 
   WHERE name_user = current_setting('request.jwt.claim.sub', TRUE)
-$$ LANGUAGE sql STABLE;
+$$;
 ```
 
 **Funzionamento:**
 1. FastAPI esegue `SET LOCAL request.jwt.claim.sub = '<username>'` prima di ogni query
 2. La funzione legge questo setting e restituisce l'UUID corrispondente
 3. Le policy RLS usano questo UUID per filtrare i dati
+
+**Sicurezza:**
+- `SET search_path = public, pg_temp`: Previene attacchi di tipo "search path injection" rendendo il search path immutabile
+- `public.users`: Schema esplicitamente qualificato per evitare ambiguità
+- `STABLE`: La funzione non modifica il database e restituisce risultati consistenti nella stessa transazione
 
 ---
 

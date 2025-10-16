@@ -8,12 +8,16 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 -- 2. Creazione di una funzione di utilità per estrarre l'ID Tenant
 -- Questa funzione legge il 'name_user' dal claim 'sub' del JWT 
 -- (che sarà iniettato da FastAPI) e restituisce l'ID UUID corrispondente.
-CREATE OR REPLACE FUNCTION get_current_tenant_id()
-RETURNS uuid AS $$
+CREATE OR REPLACE FUNCTION public.get_current_tenant_id()
+RETURNS uuid 
+LANGUAGE sql 
+STABLE 
+SET search_path = public, pg_temp
+AS $$
   SELECT id 
-  FROM users 
+  FROM public.users 
   WHERE name_user = current_setting('request.jwt.claim.sub', TRUE)
-$$ LANGUAGE sql STABLE;
+$$;
 
 -- 3. Policy di Selezione (READ)
 -- Permette agli utenti di LEGGERE solo le righe dove il tenant_id della riga 
